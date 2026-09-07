@@ -1,0 +1,16 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/api/lessons/'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "course": 1,
+      "title": "Новый урок",
+      "description": "Описание урока",
+      "video_url": "https://youtube.com/watch?v=example"
+    }

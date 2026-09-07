@@ -1,0 +1,7 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/api/courses/{{course_id}}/'
+order: 3000
+pathVariables:
+  - key: course_id
+    value: '{{course_id}}'

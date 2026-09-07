@@ -1,0 +1,16 @@
+$kind: http-request
+method: PATCH
+url: '{{base_url}}/api/lessons/{{lesson_id}}/'
+order: 5000
+pathVariables:
+  - key: lesson_id
+    value: '{{lesson_id}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Частично обновлённый урок"
+    }
