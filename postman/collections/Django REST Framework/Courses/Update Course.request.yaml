@@ -1,0 +1,17 @@
+$kind: http-request
+method: PUT
+url: '{{base_url}}/api/courses/{{course_id}}/'
+order: 4000
+pathVariables:
+  - key: course_id
+    value: '{{course_id}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Обновлённый курс",
+      "description": "Новое описание"
+    }

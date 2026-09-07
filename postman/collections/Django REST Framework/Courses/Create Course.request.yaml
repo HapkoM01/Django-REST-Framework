@@ -1,0 +1,14 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/api/courses/'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Новый курс",
+      "description": "Описание курса"
+    }

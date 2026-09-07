@@ -1,0 +1,9 @@
+$kind: collection
+name: Django REST Framework
+variables:
+  - key: base_url
+    value: 'http://127.0.0.1:8000'
+  - key: course_id
+    value: '1'
+  - key: lesson_id
+    value: '1'
