@@ -22,6 +22,7 @@ INSTALLED_APPS = [
 
     # Third-party
     'rest_framework',
+    'django_filters',
 
     # Local apps
     'users',
@@ -99,4 +100,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
 }

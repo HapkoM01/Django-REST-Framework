@@ -1,21 +1,46 @@
-# Django + DRF — Курсы и Уроки
+# Django + DRF — LMS
 
-Проект выполнен по домашнему заданию.
+Проект выполнен по домашним заданиям (CRUD + платежи, фильтрация, SerializerMethodField).
 
-## Структура
+---
 
-- `users` — кастомная модель пользователя (email как USERNAME_FIELD)
-- `materials` — модели Course и Lesson + CRUD
+## Структура проекта
+
+```
+├── config/          
+│   ├── settings.py  
+│   └── urls.py
+├── users/           
+│   ├── models.py    
+│   ├── serializers.py
+│   ├── views.py     
+│   ├── filters.py   
+│   ├── fixtures/    
+│   └── management/commands/load_payments.py
+├── materials/      
+│   ├── models.py    
+│   ├── serializers.py
+│   ├── views.py     
+│   └── urls.py
+├── manage.py
+└── requirements.txt
+```
+
+---
 
 ## Установка
 
 ```bash
 python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py load_payments    # загрузка тестовых данных
+# или: python manage.py loaddata users/fixtures/payments.json
 python manage.py runserver
 ```
+
+---
 
 ## Эндпоинты
 
@@ -27,6 +52,18 @@ python manage.py runserver
 - `PATCH  /api/courses/{id}/`     — частичное обновление
 - `DELETE /api/courses/{id}/`     — удаление
 
+В ответе курса есть:
+- `lessons_count` — количество уроков (`SerializerMethodField`)
+- `lessons` — полный список уроков (вложенный сериализатор)
+
+**Пример создания курса (POST /api/courses/):**
+```json
+{
+  "title": "Python Backend",
+  "description": "Курс по Django и DRF"
+}
+```
+
 ### Уроки (Generic APIViews)
 - `GET    /api/lessons/`          — список уроков
 - `POST   /api/lessons/`          — создание урока
@@ -35,25 +72,7 @@ python manage.py runserver
 - `PATCH  /api/lessons/{id}/`     — частичное обновление
 - `DELETE /api/lessons/{id}/`     — удаление
 
-### Пользователи (доп. задание, ViewSet)
-- `GET    /api/users/`
-- `POST   /api/users/`
-- `GET    /api/users/{id}/`
-- `PUT    /api/users/{id}/`
-- `PATCH  /api/users/{id}/`
-- `DELETE /api/users/{id}/`
-
-## Примеры запросов (Postman)
-
-**Создание курса (POST /api/courses/):**
-```json
-{
-  "title": "Python Backend",
-  "description": "Курс по Django и DRF"
-}
-```
-
-**Создание урока (POST /api/lessons/):**
+**Пример создания урока (POST /api/lessons/):**
 ```json
 {
   "course": 1,
@@ -63,7 +82,17 @@ python manage.py runserver
 }
 ```
 
-**Обновление профиля (PATCH /api/users/1/):**
+### Пользователи (ViewSet)
+- `GET    /api/users/`
+- `POST   /api/users/`
+- `GET    /api/users/{id}/`
+- `PUT    /api/users/{id}/`
+- `PATCH  /api/users/{id}/`
+- `DELETE /api/users/{id}/`
+
+В профиле пользователя выводится `payments` — история платежей.
+
+**Пример обновления профиля (PATCH /api/users/1/):**
 ```json
 {
   "phone": "+79001112233",
@@ -71,7 +100,64 @@ python manage.py runserver
 }
 ```
 
-Авторизация на этом этапе **не требуется** (AllowAny).
+### Платежи (ViewSet)
+- `GET    /api/payments/`
+- `POST   /api/payments/`
+- `GET    /api/payments/{id}/`
+- `PUT    /api/payments/{id}/`
+- `PATCH  /api/payments/{id}/`
+- `DELETE /api/payments/{id}/`
+
+**Фильтрация и сортировка:**
+
+| Параметр | Пример | Описание |
+|----------|--------|----------|
+| `ordering` | `?ordering=payment_date` | по возрастанию даты |
+| `ordering` | `?ordering=-payment_date` | по убыванию даты |
+| `paid_course` | `?paid_course=1` | фильтр по ID курса |
+| `paid_lesson` | `?paid_lesson=2` | фильтр по ID урока |
+| `payment_method` | `?payment_method=cash` | наличные |
+| `payment_method` | `?payment_method=transfer` | перевод |
+
+Примеры:
+```
+/api/payments/?ordering=-payment_date
+/api/payments/?paid_course=1
+/api/payments/?payment_method=cash
+/api/payments/?paid_lesson=2&ordering=payment_date
+```
+
+---
+
+## Модели
+
+### User (приложение `users`)
+- Наследуется от `AbstractBaseUser` + `PermissionsMixin`
+- `USERNAME_FIELD = 'email'`
+- Поля: `email`, `phone`, `city`, `avatar`
+
+### Course (приложение `materials`)
+- `title`, `preview` (картинка), `description`
+
+### Lesson (приложение `materials`)
+- `title`, `description`, `preview`, `video_url`
+- Связь с курсом: `ForeignKey` → Course (`related_name='lessons'`)
+
+### Payment (приложение `users`)
+- `user` — ForeignKey на User
+- `payment_date` — дата оплаты
+- `paid_course` — ForeignKey на Course (nullable)
+- `paid_lesson` — ForeignKey на Lesson (nullable)
+- `amount` — сумма
+- `payment_method` — `cash` (наличные) | `transfer` (перевод на счёт)
+
+---
+
+## Примечания
+
+- Авторизация на данном этапе **не требуется** (`AllowAny`).
+- Работу каждого эндпоинта можно проверять через Postman или Browsable API.
+- Тестовые данные: `python manage.py load_payments` или фикстура `users/fixtures/payments.json`.
 
 ## 👨‍💻 Код написал:
 
