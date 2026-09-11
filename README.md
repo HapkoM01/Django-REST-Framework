@@ -1,26 +1,30 @@
 # Django + DRF — LMS
 
-Проект выполнен по домашним заданиям (CRUD + платежи, фильтрация, SerializerMethodField).
+Проект LMS на Django REST Framework. Объединяет домашние задания 1–3:
+CRUD, платежи, фильтрация, JWT-авторизация, права модераторов и владельцев.
 
 ---
 
 ## Структура проекта
 
 ```
-├── config/          
-│   ├── settings.py  
+├── config/                 # настройки проекта
+│   ├── settings.py         # DRF, JWT, django-filter, AUTH_USER_MODEL
 │   └── urls.py
-├── users/           
-│   ├── models.py    
-│   ├── serializers.py
-│   ├── views.py     
-│   ├── filters.py   
-│   ├── fixtures/    
-│   └── management/commands/load_payments.py
-├── materials/      
-│   ├── models.py    
-│   ├── serializers.py
-│   ├── views.py     
+├── users/                  # пользователи и платежи
+│   ├── models.py           # User (AbstractBaseUser), Payment
+│   ├── serializers.py      # регистрация, публичный/полный профиль, платежи
+│   ├── views.py            # UserViewSet, PaymentViewSet, регистрация
+│   ├── permissions.py      # IsModerator, IsOwner, IsOwnerOrModerator, IsOwnerProfile
+│   ├── filters.py          # фильтрация платежей
+│   ├── fixtures/           # groups.json, payments.json
+│   └── management/commands/
+│       ├── load_payments.py
+│       └── create_moderators_group.py
+├── materials/              # курсы и уроки
+│   ├── models.py           # Course, Lesson (+ owner)
+│   ├── serializers.py      # lessons_count, вложенные lessons
+│   ├── views.py            # CourseViewSet, Generic APIViews для Lesson
 │   └── urls.py
 ├── manage.py
 └── requirements.txt
@@ -35,45 +39,96 @@ python -m venv venv
 source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py load_payments    # загрузка тестовых данных
-# или: python manage.py loaddata users/fixtures/payments.json
+python manage.py create_moderators_group   # или: loaddata users/fixtures/groups.json
+python manage.py load_payments             # тестовые данные + модератор
 python manage.py runserver
 ```
+
+### Тестовые аккаунты (после `load_payments`)
+
+| Email | Пароль | Роль |
+|-------|--------|------|
+| user1@example.com | password123 | обычный пользователь |
+| user2@example.com | password123 | обычный пользователь |
+| moderator@example.com | password123 | модератор |
+
+---
+
+## Авторизация (JWT)
+
+```
+POST /api/auth/register/       — регистрация (без токена)
+POST /api/auth/token/          — получить access + refresh
+POST /api/auth/token/refresh/  — обновить access
+```
+
+**Регистрация:**
+```json
+POST /api/auth/register/
+{
+  "email": "new@test.com",
+  "password": "password123",
+  "password_confirm": "password123",
+  "phone": "+79001112233",
+  "city": "Москва"
+}
+```
+
+**Логин:**
+```json
+POST /api/auth/token/
+{
+  "email": "user1@example.com",
+  "password": "password123"
+}
+```
+
+В Postman: **Authorization → Bearer Token** → вставь `access`.
+
+Все остальные эндпоинты требуют JWT.
 
 ---
 
 ## Эндпоинты
 
-### Курсы (ViewSet)
-- `GET    /api/courses/`          — список курсов
-- `POST   /api/courses/`          — создание курса
-- `GET    /api/courses/{id}/`     — один курс
-- `PUT    /api/courses/{id}/`     — полное обновление
-- `PATCH  /api/courses/{id}/`     — частичное обновление
-- `DELETE /api/courses/{id}/`     — удаление
+### Курсы (ViewSet) — JWT
 
-В ответе курса есть:
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/courses/` | список курсов |
+| POST | `/api/courses/` | создание курса |
+| GET | `/api/courses/{id}/` | один курс |
+| PUT/PATCH | `/api/courses/{id}/` | обновление |
+| DELETE | `/api/courses/{id}/` | удаление |
+
+В ответе курса:
 - `lessons_count` — количество уроков (`SerializerMethodField`)
 - `lessons` — полный список уроков (вложенный сериализатор)
+- `owner` — владелец
 
-**Пример создания курса (POST /api/courses/):**
+**Пример создания:**
 ```json
+POST /api/courses/
 {
   "title": "Python Backend",
   "description": "Курс по Django и DRF"
 }
 ```
+Поле `owner` заполняется автоматически (`perform_create`).
 
-### Уроки (Generic APIViews)
-- `GET    /api/lessons/`          — список уроков
-- `POST   /api/lessons/`          — создание урока
-- `GET    /api/lessons/{id}/`     — один урок
-- `PUT    /api/lessons/{id}/`     — полное обновление
-- `PATCH  /api/lessons/{id}/`     — частичное обновление
-- `DELETE /api/lessons/{id}/`     — удаление
+### Уроки (Generic APIViews) — JWT
 
-**Пример создания урока (POST /api/lessons/):**
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/lessons/` | список уроков |
+| POST | `/api/lessons/` | создание урока |
+| GET | `/api/lessons/{id}/` | один урок |
+| PUT/PATCH | `/api/lessons/{id}/` | обновление |
+| DELETE | `/api/lessons/{id}/` | удаление |
+
+**Пример создания:**
 ```json
+POST /api/lessons/
 {
   "course": 1,
   "title": "Введение в DRF",
@@ -82,31 +137,32 @@ python manage.py runserver
 }
 ```
 
-### Пользователи (ViewSet)
-- `GET    /api/users/`
-- `POST   /api/users/`
-- `GET    /api/users/{id}/`
-- `PUT    /api/users/{id}/`
-- `PATCH  /api/users/{id}/`
-- `DELETE /api/users/{id}/`
+### Пользователи — JWT
 
-В профиле пользователя выводится `payments` — история платежей.
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET | `/api/users/` | список (публичные данные) |
+| GET | `/api/users/{id}/` | свой — полный (с payments); чужой — без payments |
+| PUT/PATCH | `/api/users/{id}/` | только свой профиль |
+| DELETE | `/api/users/{id}/` | только свой профиль |
 
-**Пример обновления профиля (PATCH /api/users/1/):**
+Регистрация — через `/api/auth/register/` (без JWT).
+
+**Пример обновления профиля:**
 ```json
+PATCH /api/users/1/
 {
   "phone": "+79001112233",
   "city": "Москва"
 }
 ```
 
-### Платежи (ViewSet)
-- `GET    /api/payments/`
-- `POST   /api/payments/`
-- `GET    /api/payments/{id}/`
-- `PUT    /api/payments/{id}/`
-- `PATCH  /api/payments/{id}/`
-- `DELETE /api/payments/{id}/`
+### Платежи — JWT
+
+| Метод | URL | Описание |
+|-------|-----|----------|
+| GET/POST | `/api/payments/` | список / создание |
+| GET/PUT/PATCH/DELETE | `/api/payments/{id}/` | один платёж |
 
 **Фильтрация и сортировка:**
 
@@ -129,36 +185,78 @@ python manage.py runserver
 
 ---
 
-## Модели
+## Права доступа
 
-### User (приложение `users`)
-- Наследуется от `AbstractBaseUser` + `PermissionsMixin`
-- `USERNAME_FIELD = 'email'`
-- Поля: `email`, `phone`, `city`, `avatar`
+| Роль | Курсы / Уроки |
+|------|----------------|
+| **Обычный пользователь** | CRUD только **своих** объектов |
+| **Модератор** | просмотр и редактирование **любых**; **нельзя** создавать и удалять |
+| **Владелец** | полный CRUD своих объектов |
 
-### Course (приложение `materials`)
-- `title`, `preview` (картинка), `description`
+| Действие | Обычный | Модератор | Владелец |
+|----------|---------|-----------|----------|
+| list / retrieve | свои | все | свои |
+| create | ✅ | ❌ | ✅ |
+| update | свои | любые | свои |
+| delete | свои | ❌ | свои |
 
-### Lesson (приложение `materials`)
-- `title`, `description`, `preview`, `video_url`
-- Связь с курсом: `ForeignKey` → Course (`related_name='lessons'`)
+- Группа `moderators` — фикстура / `create_moderators_group`
+- Назначение пользователей в группу — через админку
+- Поле `owner` (FK на User) в моделях Course и Lesson
+- При создании объекта `owner` = текущий пользователь
 
-### Payment (приложение `users`)
-- `user` — ForeignKey на User
-- `payment_date` — дата оплаты
-- `paid_course` — ForeignKey на Course (nullable)
-- `paid_lesson` — ForeignKey на Lesson (nullable)
-- `amount` — сумма
-- `payment_method` — `cash` (наличные) | `transfer` (перевод на счёт)
+**Профиль:**
+- любой авторизованный может **смотреть** любой профиль
+- **редактировать** можно только свой
+- чужой профиль — без пароля и без истории платежей
 
 ---
 
-## Примечания
+## Модели
 
-- Авторизация на данном этапе **не требуется** (`AllowAny`).
-- Работу каждого эндпоинта можно проверять через Postman или Browsable API.
-- Тестовые данные: `python manage.py load_payments` или фикстура `users/fixtures/payments.json`.
+### User (`users`)
+- `AbstractBaseUser` + `PermissionsMixin`
+- `USERNAME_FIELD = 'email'`
+- Поля: `email`, `phone`, `city`, `avatar`
 
-## 👨‍💻 Код написал:
+### Course (`materials`)
+- `title`, `preview`, `description`, `owner`
 
-### 𝑯𝒂𝒑𝒌𝒐𝑴 - 𝑩𝒆𝒈𝒊𝒏𝒏𝒆𝒓 𝑷𝒚𝒕𝒉𝒐𝒏-𝒅𝒆𝒗𝒆𝒍𝒐𝒑𝒆𝒓!
+### Lesson (`materials`)
+- `title`, `description`, `preview`, `video_url`
+- `course` → ForeignKey(Course)
+- `owner` → ForeignKey(User)
+
+### Payment (`users`)
+- `user` → ForeignKey(User)
+- `payment_date`
+- `paid_course` → ForeignKey(Course, nullable)
+- `paid_lesson` → ForeignKey(Lesson, nullable)
+- `amount`
+- `payment_method`: `cash` | `transfer`
+
+---
+
+## Permissions (классы)
+
+| Класс | Назначение |
+|-------|------------|
+| `IsModerator` | пользователь в группе `moderators` |
+| `IsOwner` | `obj.owner == request.user` |
+| `IsOwnerOrModerator` | владелец или модератор (модератор не удаляет) |
+| `IsOwnerProfile` | редактировать профиль может только сам пользователь |
+
+Для ViewSet права задаются в `get_permissions()` по `self.action`.  
+Для Generic — через `permission_classes` / `get_permissions()`.
+
+---
+
+## Зависимости
+
+```
+Django>=4.2,<7
+djangorestframework>=3.14
+djangorestframework-simplejwt>=5.3
+django-filter>=23.0
+Pillow>=10.0
+```
