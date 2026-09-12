@@ -260,3 +260,44 @@ djangorestframework-simplejwt>=5.3
 django-filter>=23.0
 Pillow>=10.0
 ```
+
+
+---
+
+## ДЗ 4: валидация, подписки, пагинация, тесты
+
+### Валидатор YouTube
+Файл `materials/validators.py` — разрешены только `youtube.com` / `youtu.be`.
+Подключён к полю `video_url` в `LessonSerializer`.
+
+### Подписка на курс
+Модель `Subscription` (user + course, unique_together).
+
+```
+POST /api/subscriptions/toggle/
+{"course_id": 1}
+```
+Ответ: `{"message": "Подписка добавлена"}` или `"Подписка удалена"`.
+
+В ответе курса поле `is_subscribed` (bool) — подписан ли текущий пользователь.
+
+### Пагинация
+`materials/paginators.py` — `MaterialsPagination`:
+- `page_size = 5`
+- `page_size_query_param = 'page_size'`
+- `max_page_size = 50`
+
+Подключена к списку курсов и уроков.
+
+### Тесты
+```bash
+python manage.py test materials
+# покрытие:
+coverage run --source='materials,users' manage.py test materials
+coverage report -m > coverage.txt
+coverage html   # HTML-отчёт в htmlcov/
+```
+
+## 👨‍💻 Код написал:
+
+### 𝑯𝒂𝒑𝒌𝒐𝑴 - 𝑩𝒆𝒈𝒊𝒏𝒏𝒆𝒓 𝑷𝒚𝒕𝒉𝒐𝒏-𝒅𝒆𝒗𝒆𝒍𝒐𝒑𝒆𝒓!
