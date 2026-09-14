@@ -49,22 +49,30 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Payment(models.Model):
-    """
-    Модель платежей.
-    Можно оплатить либо курс, либо урок (оба поля nullable).
-    """
+    """Платёж за курс или урок (в т.ч. через Stripe)."""
     CASH = 'cash'
     TRANSFER = 'transfer'
+    STRIPE = 'stripe'
     PAYMENT_METHOD_CHOICES = [
         (CASH, 'Наличные'),
         (TRANSFER, 'Перевод на счёт'),
+        (STRIPE, 'Stripe'),
+    ]
+
+    STATUS_PENDING = 'pending'
+    STATUS_PAID = 'paid'
+    STATUS_CANCELED = 'canceled'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Ожидает оплаты'),
+        (STATUS_PAID, 'Оплачен'),
+        (STATUS_CANCELED, 'Отменён'),
     ]
 
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='payments',
-        verbose_name='Пользователь'
+        verbose_name='Пользователь',
     )
     payment_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата оплаты')
     paid_course = models.ForeignKey(
@@ -73,7 +81,7 @@ class Payment(models.Model):
         null=True,
         blank=True,
         related_name='payments',
-        verbose_name='Оплаченный курс'
+        verbose_name='Оплаченный курс',
     )
     paid_lesson = models.ForeignKey(
         'materials.Lesson',
@@ -81,18 +89,28 @@ class Payment(models.Model):
         null=True,
         blank=True,
         related_name='payments',
-        verbose_name='Оплаченный урок'
+        verbose_name='Оплаченный урок',
     )
     amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        verbose_name='Сумма оплаты'
+        verbose_name='Сумма оплаты',
     )
     payment_method = models.CharField(
         max_length=20,
         choices=PAYMENT_METHOD_CHOICES,
-        verbose_name='Способ оплаты'
+        verbose_name='Способ оплаты',
     )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        verbose_name='Статус',
+    )
+    stripe_product_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_price_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_session_id = models.CharField(max_length=255, blank=True, null=True)
+    payment_link = models.URLField(blank=True, null=True, verbose_name='Ссылка на оплату')
 
     class Meta:
         verbose_name = 'Платёж'

@@ -26,7 +26,7 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'amount', 'payment_method', 'paid_course', 'paid_lesson', 'payment_date')
+    list_display = ('id', 'user', 'amount', 'payment_method', 'status', 'paid_course', 'payment_link', 'payment_date')
     list_filter = ('payment_method', 'payment_date')
     search_fields = ('user__email',)
     ordering = ('-payment_date',)

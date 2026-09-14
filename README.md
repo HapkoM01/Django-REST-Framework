@@ -298,6 +298,51 @@ coverage report -m > coverage.txt
 coverage html   # HTML-отчёт в htmlcov/
 ```
 
+
+---
+
+## ДЗ 5: документация и Stripe
+
+### Документация API (drf-spectacular)
+
+| URL | Описание |
+|-----|----------|
+| http://127.0.0.1:8000/api/docs/ | Swagger UI |
+| http://127.0.0.1:8000/api/redoc/ | ReDoc |
+| http://127.0.0.1:8000/api/schema/ | OpenAPI schema (JSON) |
+
+### Stripe — оплата курса
+
+1. Зарегистрируй тестовый аккаунт: https://dashboard.stripe.com/register  
+2. Ключи: https://dashboard.stripe.com/test/apikeys  
+3. В `config/settings.py` или env:
+   ```
+   STRIPE_SECRET_KEY=sk_test_...
+   STRIPE_PUBLISHABLE_KEY=pk_test_...
+   ```
+
+**Создание оплаты:**
+```
+POST /api/payments/stripe/checkout/
+Authorization: Bearer <token>
+{
+  "course_id": 1,
+  "success_url": "http://127.0.0.1:8000/success/",
+  "cancel_url": "http://127.0.0.1:8000/cancel/"
+}
+```
+Ответ: объект Payment с `payment_link` (ссылка на Stripe Checkout).
+
+**Проверка статуса (доп.):**
+```
+GET /api/payments/stripe/status/<session_id>/
+```
+
+Цена курса берётся из `Course.price` (в рублях), в Stripe уходит в **копейках** (`amount * 100`).
+
+Тестовые карты: https://stripe.com/docs/testing#cards  
+Например: `4242 4242 4242 4242`
+
 ## 👨‍💻 Код написал:
 
 ### 𝑯𝒂𝒑𝒌𝒐𝑴 - 𝑩𝒆𝒈𝒊𝒏𝒏𝒆𝒓 𝑷𝒚𝒕𝒉𝒐𝒏-𝒅𝒆𝒗𝒆𝒍𝒐𝒑𝒆𝒓!

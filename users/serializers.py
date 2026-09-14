@@ -6,7 +6,6 @@ User = get_user_model()
 
 
 class PaymentSerializer(serializers.ModelSerializer):
-    """Сериализатор платежа."""
     user_email = serializers.EmailField(source='user.email', read_only=True)
     course_title = serializers.CharField(source='paid_course.title', read_only=True, default=None)
     lesson_title = serializers.CharField(source='paid_lesson.title', read_only=True, default=None)
@@ -24,11 +23,38 @@ class PaymentSerializer(serializers.ModelSerializer):
             'lesson_title',
             'amount',
             'payment_method',
+            'status',
+            'stripe_product_id',
+            'stripe_price_id',
+            'stripe_session_id',
+            'payment_link',
+        )
+        read_only_fields = (
+            'status',
+            'stripe_product_id',
+            'stripe_price_id',
+            'stripe_session_id',
+            'payment_link',
+            'payment_date',
         )
 
 
+class StripeCheckoutSerializer(serializers.Serializer):
+    """Тело запроса на создание оплаты курса через Stripe."""
+    course_id = serializers.IntegerField(help_text='ID курса для оплаты')
+    success_url = serializers.URLField(
+        required=False,
+        default='http://127.0.0.1:8000/api/payments/success/',
+        help_text='URL после успешной оплаты',
+    )
+    cancel_url = serializers.URLField(
+        required=False,
+        default='http://127.0.0.1:8000/api/payments/cancel/',
+        help_text='URL при отмене оплаты',
+    )
+
+
 class UserRegisterSerializer(serializers.ModelSerializer):
-    """Сериализатор регистрации пользователя."""
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True, min_length=8)
 
@@ -53,9 +79,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
 
 class UserPublicSerializer(serializers.ModelSerializer):
-    """
-    Публичный профиль (чужой): без пароля, без истории платежей.
-    """
     class Meta:
         model = User
         fields = ('id', 'email', 'phone', 'city', 'avatar', 'date_joined')
@@ -63,21 +86,12 @@ class UserPublicSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """
-    Полный профиль (свой): с историей платежей.
-    """
     payments = PaymentSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
         fields = (
-            'id',
-            'email',
-            'phone',
-            'city',
-            'avatar',
-            'is_active',
-            'date_joined',
-            'payments',
+            'id', 'email', 'phone', 'city', 'avatar',
+            'is_active', 'date_joined', 'payments',
         )
         read_only_fields = ('id', 'date_joined', 'email')
