@@ -6,6 +6,12 @@ from pathlib import Path
 from datetime import timedelta
 import os
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-7=51^%&8s*+=k(ype66*l11uvcze7ec=1i_!8ma4y_u1lu+@17'
@@ -129,3 +135,23 @@ SPECTACULAR_SETTINGS = {
 # Stripe (тестовые ключи — подставьте свои из https://dashboard.stripe.com/test/apikeys)
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_replace_me')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_replace_me')
+
+
+# Email (консоль для разработки — письма видны в терминале worker)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@lms.local')
+
+# Celery + Redis (настройки из .env)
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE  # Europe/Moscow — совпадает с Django
+CELERY_ENABLE_UTC = True
+CELERY_BEAT_SCHEDULE = {
+    'deactivate-inactive-users-daily': {
+        'task': 'users.tasks.deactivate_inactive_users',
+        'schedule': 86400.0,  # раз в сутки (секунды)
+    },
+}

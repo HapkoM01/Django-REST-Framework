@@ -15,6 +15,7 @@ class Course(models.Model):
         null=True,
         blank=True,
     )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлён')
 
     class Meta:
         verbose_name = 'Курс'

@@ -1,13 +1,40 @@
+from datetime import timedelta
+
+from django.utils import timezone
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.shortcuts import get_object_or_404
 
 from .models import Course, Lesson, Subscription
 from .serializers import CourseSerializer, LessonSerializer
 from .paginators import MaterialsPagination
+from .tasks import send_course_update_email
 from users.permissions import IsModerator, IsOwner, IsOwnerOrModerator
+
+
+def _notify_course_subscribers(course: Course) -> None:
+    """
+    Ставит задачу на рассылку, только если курс не обновлялся более 4 часов.
+    Сравнение через timezone.now() и updated_at.
+    """
+    now = timezone.now()
+    # auto_now уже обновит updated_at при save; проверяем «старое» значение до save
+    # вызывающий код должен передать курс ДО финального save либо после —
+    # здесь: если updated_at старше 4 часов (или только что создан с тем же моментом)
+    last = course.updated_at
+    if last is not None and (now - last) < timedelta(hours=4):
+        return
+
+    emails = list(
+        Subscription.objects.filter(course=course)
+        .select_related('user')
+        .values_list('user__email', flat=True)
+    )
+    emails = [e for e in emails if e]
+    if emails:
+        send_course_update_email.delay(course.id, course.title, emails)
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -41,6 +68,23 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    def perform_update(self, serializer):
+        # проверяем updated_at ДО сохранения (auto_now изменит его)
+        course = self.get_object()
+        should_notify = (
+            course.updated_at is None
+            or (timezone.now() - course.updated_at) >= timedelta(hours=4)
+        )
+        instance = serializer.save()
+        if should_notify:
+            emails = list(
+                Subscription.objects.filter(course=instance)
+                .values_list('user__email', flat=True)
+            )
+            emails = [e for e in emails if e]
+            if emails:
+                send_course_update_email.delay(instance.id, instance.title, emails)
 
 
 class LessonListCreateAPIView(generics.ListCreateAPIView):
@@ -85,6 +129,29 @@ class LessonRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
         else:
             self.permission_classes = [IsAuthenticated]
         return [permission() for permission in self.permission_classes]
+
+    def perform_update(self, serializer):
+        """
+        При обновлении урока — уведомление подписчиков курса,
+        только если курс не обновлялся более 4 часов.
+        """
+        lesson = self.get_object()
+        course = lesson.course
+        should_notify = (
+            course.updated_at is None
+            or (timezone.now() - course.updated_at) >= timedelta(hours=4)
+        )
+        serializer.save()
+        if should_notify:
+            # touch course.updated_at
+            course.save(update_fields=['updated_at'])
+            emails = list(
+                Subscription.objects.filter(course=course)
+                .values_list('user__email', flat=True)
+            )
+            emails = [e for e in emails if e]
+            if emails:
+                send_course_update_email.delay(course.id, course.title, emails)
 
 
 class SubscriptionToggleAPIView(APIView):

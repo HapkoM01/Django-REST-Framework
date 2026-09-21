@@ -343,6 +343,48 @@ GET /api/payments/stripe/status/<session_id>/
 Тестовые карты: https://stripe.com/docs/testing#cards  
 Например: `4242 4242 4242 4242`
 
+
+---
+
+## ДЗ 6: Celery + Redis + рассылки
+
+### Зависимости и .env
+
+```bash
+pip install -r requirements.txt
+# Redis должен быть запущен: redis-server
+```
+
+`.env`:
+```
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+```
+
+### Запуск (3 терминала)
+
+```bash
+# 1. Django
+python manage.py runserver
+
+# 2. Celery worker
+celery -A config worker -l info
+
+# 3. Celery beat (периодические задачи)
+celery -A config beat -l info
+```
+
+### Задачи
+
+| Задача | Когда |
+|--------|--------|
+| `materials.tasks.send_course_update_email` | после успешного update курса/урока, если `updated_at` старше 4 часов |
+| `users.tasks.deactivate_inactive_users` | ежедневно (celery-beat): `is_active=False` если `last_login` > 30 дней |
+
+Timezone Django и Celery: `Europe/Moscow`.
+
+Письма в dev пишутся в консоль worker (`EMAIL_BACKEND = console`).
+
 ## 👨‍💻 Код написал:
 
 ### 𝑯𝒂𝒑𝒌𝒐𝑴 - 𝑩𝒆𝒈𝒊𝒏𝒏𝒆𝒓 𝑷𝒚𝒕𝒉𝒐𝒏-𝒅𝒆𝒗𝒆𝒍𝒐𝒑𝒆𝒓!
