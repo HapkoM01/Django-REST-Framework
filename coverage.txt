@@ -1,0 +1,37 @@
+Name                                                   Stmts   Miss  Cover   Missing
+------------------------------------------------------------------------------------
+materials\__init__.py                                      0      0   100%
+materials\admin.py                                        15      0   100%
+materials\apps.py                                          3      0   100%
+materials\migrations\0001_initial.py                       6      0   100%
+materials\migrations\0002_add_owner.py                     6      0   100%
+materials\migrations\0002_alter_lesson_video_url.py        4      0   100%
+materials\migrations\0003_add_owner.py                     6      0   100%
+materials\migrations\0003_subscription.py                  6      0   100%
+materials\migrations\__init__.py                           0      0   100%
+materials\models.py                                       34      3    91%   23, 51, 76
+materials\paginators.py                                    5      5     0%   1-7
+materials\serializers.py                                  29     29     0%   1-49
+materials\tests.py                                       186    144    23%   12-35, 48-52, 55-56, 59-65, 68-73, 76-84, 87-90, 93-95, 98-107, 110-116, 119-121, 128-137, 140-148, 151-162, 165-169, 172-175, 178-186, 189-192, 195-197, 200-217, 220-221, 228-236, 241-250, 255-259, 262-265, 268-270, 273-278, 281-283, 290-297, 300-311, 314-319
+materials\urls.py                                          6      6     0%   1-13
+materials\validators.py                                   15     15     0%   1-24
+materials\views.py                                        78     78     0%   1-116
+users\__init__.py                                          0      0   100%
+users\admin.py                                            17      0   100%
+users\apps.py                                              3      0   100%
+users\filters.py                                           9      9     0%   1-19
+users\management\__init__.py                               0      0   100%
+users\management\commands\__init__.py                      0      0   100%
+users\management\commands\create_moderators_group.py       9      9     0%   1-13
+users\management\commands\load_payments.py                48     48     0%   1-143
+users\migrations\0001_initial.py                           5      0   100%
+users\migrations\0002_payment.py                           6      0   100%
+users\migrations\__init__.py                               0      0   100%
+users\models.py                                           52     17    67%   7-13, 16-25, 48, 103
+users\permissions.py                                      22     22     0%   1-49
+users\serializers.py                                      41     41     0%   1-83
+users\tests.py                                           151    112    26%   13-35, 47-57, 60-67, 70-77, 80-87, 92-99, 102-107, 110-119, 126-131, 134-135, 138-147, 150-159, 162-170, 173-179, 182-185, 188-190, 197-204, 212-214, 217-218, 221-229, 232-235, 238-244, 247-249, 252-257, 260-262, 265-270, 273-277
+users\urls.py                                              8      8     0%   1-13
+users\views.py                                            47     47     0%   1-75
+------------------------------------------------------------------------------------
+TOTAL                                                    817    593    27%
